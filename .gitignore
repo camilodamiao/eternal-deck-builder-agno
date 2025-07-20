@@ -3,3 +3,16 @@ venv/
 __pycache__/
 *.pyc
 /credentials
+# ChromaDB - Base vetorial (muito grande para Git)
+data/chromadb/
+data/chromadb_backups/
+
+# Logs
+data/logs/
+
+# Checkpoint temporário
+data/chromadb/.setup_progress
+
+#chromadb models
+data/models/.locks
+data/models/models--sentence-transformers--all-mpnet-base-v2
