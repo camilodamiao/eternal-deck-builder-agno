@@ -87,6 +87,18 @@ class GoogleSheetsClient:
             return None
             
         try:
+            # 🚨 ÂNCORA: UNIT_TYPES_PARSING - Parse dos 3 campos de tipo
+            # Contexto: UnitType/0, UnitType/1, UnitType/2 podem estar vazios
+            # Cuidado: Remover espaços e valores vazios
+            # Dependências: models.py espera List[str]
+            unit_types = []
+            for i in range(3):
+                unit_type_field = f'UnitType/{i}'
+                if unit_type_field in row and row[unit_type_field]:
+                    type_value = str(row[unit_type_field]).strip()
+                    if type_value and type_value.lower() != 'nan':
+                        unit_types.append(type_value)
+            
             # Mapear campos com tratamento de vazios
             card_data = {
                 # Obrigatórios
@@ -103,6 +115,15 @@ class GoogleSheetsClient:
                 # IDs para exportação
                 'set_number': str(row.get('SetNumber', '')).strip(),
                 'eternal_id': str(row.get('EternalID', '')).strip(),
+                
+                # 🚨 ÂNCORA: SET_NAME_PARSING - Nome do set
+                # Contexto: Importante para filtros de formato (Expedition)
+                # Cuidado: Pode estar vazio em cartas antigas
+                # Dependências: Usado em filtros futuros
+                'set_name': row.get('SetName', '').strip() or None,
+                
+                # Novos campos
+                'unit_types': unit_types,  # Lista processada acima
                 
                 # Opcionais - converter vazios em None
                 'attack': int(row['Attack']) if row.get('Attack') and str(row['Attack']).isdigit() else None,
@@ -247,6 +268,34 @@ class GoogleSheetsClient:
             
         return [c for c in self._cards_cache if c.can_access_market]
     
+    def get_cards_by_unit_type(self, unit_type: str) -> List[Card]:
+        """
+        Retorna todas as cartas de um tipo tribal específico
+        Ex: get_cards_by_unit_type("Valkyrie")
+        """
+        if not self._cache_loaded:
+            self._load_all_cards()
+        
+        unit_type_lower = unit_type.lower()
+        return [
+            card for card in self._cards_cache 
+            if any(ut.lower() == unit_type_lower for ut in card.unit_types)
+        ]
+
+    def get_cards_by_set(self, set_name: str) -> List[Card]:
+        """
+        Retorna todas as cartas de um set específico
+        Ex: get_cards_by_set("Dark Frontier")
+        """
+        if not self._cache_loaded:
+            self._load_all_cards()
+        
+        set_name_lower = set_name.lower()
+        return [
+            card for card in self._cards_cache 
+            if card.set_name and card.set_name.lower() == set_name_lower
+        ]
+    
     def get_cache_info(self) -> Dict[str, Any]:
         """Retorna informações sobre o cache"""
         return {
@@ -311,3 +360,9 @@ if __name__ == "__main__":
         # Info do cache
         cache_info = client.get_cache_info()
         print(f"\n💾 Cache: {cache_info['memory_kb']:.1f} KB")
+
+        # Testar tribal
+        valkyries = client.get_cards_by_unit_type("Valkyrie")
+        print(f"\n⚔️ Valkyries encontradas: {len(valkyries)}")
+        if valkyries:
+            print(f"   Exemplo: {valkyries[0].name} - {valkyries[0].unit_types}")

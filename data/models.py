@@ -3,7 +3,8 @@ Modelos de dados para o Eternal Deck Builder
 Estruturas principais: Card, DeckCard, Deck
 """
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, field_validator
+import re
 
 # =============================================================================
 # 🚨 ÂNCORA: CARD_MODEL - Modelo principal de carta
@@ -34,6 +35,41 @@ class Card(BaseModel):
     # Campos extras úteis
     eternal_id: Optional[str] = Field(None, description="ID único no jogo", alias="EternalID")
     image_url: Optional[str] = Field(None, description="URL da imagem", alias="ImageUrl")
+
+    # 🚨 ÂNCORA: UNIT_TYPES - Tipos tribais para sinergias
+    # Contexto: Uma unidade pode ter até 3 tipos (ex: Valkyrie Soldier Hero)
+    # Cuidado: Lista vazia para não-unidades
+    # Dependências: Usado para busca tribal e sinergias de Bond
+    unit_types: List[str] = Field(
+        default_factory=list, 
+        description="Tipos da unidade (Valkyrie, Oni, etc.)",
+        max_items=3
+    )
+    
+    # 🚨 ÂNCORA: SET_INFO - Informações do set para formatos
+    # Contexto: SetName é mais legível que SetNumber para filtros
+    # Cuidado: Opcional pois algumas cartas podem não ter
+    # Dependências: Usado para modo Expedition e filtros de formato
+    set_name: Optional[str] = Field(
+        None, 
+        description="Nome do set (ex: Dark Frontier)",
+        alias="SetName"
+    )
+
+     # 🚨 ÂNCORA: HTML_CLEANUP - Limpeza de tags HTML do CardText
+    # Contexto: Google Sheets exporta com tags <b>, <i>, etc.
+    # Cuidado: Aplicar apenas ao card_text, outros campos não têm HTML
+    # Dependências: Afeta RAG embeddings, busca de keywords, detecção de mercado
+    @field_validator('card_text', mode='before')
+    def clean_html_from_card_text(cls, v):
+        """Remove todas as tags HTML do texto da carta"""
+        if not v:
+            return ""
+        # Remove qualquer tag HTML (incluindo <b>, <i>, etc.)
+        cleaned = re.sub(r'<[^>]+>', '', str(v))
+        # Remove espaços extras que podem ter ficado
+        cleaned = ' '.join(cleaned.split())
+        return cleaned
     
     # Configuração do Pydantic
     class Config:
@@ -93,6 +129,18 @@ class Card(BaseModel):
                 factions.add(symbol)
         return len(factions)
     
+    @computed_field
+    @property
+    def is_tribal(self) -> bool:
+        """Verifica se a unidade tem tipos tribais"""
+        return len(self.unit_types) > 0
+    
+    @computed_field
+    @property
+    def has_unit_type(self, unit_type: str) -> bool:
+        """Verifica se tem um tipo específico"""
+        return unit_type.lower() in [t.lower() for t in self.unit_types]
+
     # =============================================================================
     # 🚨 ÂNCORA: MARKET_ACCESS - Detecção de acesso ao mercado
     # Contexto: Identifica cartas que podem acessar o mercado
@@ -110,8 +158,12 @@ class Card(BaseModel):
         if not self.card_text:
             return False
         
+        # 🚨 ÂNCORA: MARKET_DETECTION - Simplificado após limpeza HTML
+        # Contexto: card_text já está limpo de HTML tags
+        # Cuidado: Manter patterns em lowercase
+        # Dependências: Merchants, Smugglers, Etchings detection
         text_lower = self.card_text.lower()
-        # Padrões comuns que indicam acesso ao mercado
+        
         market_patterns = [
             "your market",
             "from your market", 
@@ -139,14 +191,12 @@ class Card(BaseModel):
             stats = self.format_stats()
             if stats:
                 parts.append(stats)
+            # Adicionar tipos se existirem
+            if self.unit_types:
+                parts.append(f"[{' '.join(self.unit_types)}]")
                 
         parts.append(self.rarity)
         return " | ".join(parts)
-    
-    def __str__(self) -> str:
-        """Representação em string da carta"""
-        return self.format_for_deck()
-
 
 # =============================================================================
 # 🚨 ÂNCORA: DECK_CARD - Carta com quantidade no deck

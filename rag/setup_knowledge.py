@@ -124,44 +124,77 @@ Rarity: {card.rarity}
     @staticmethod
     def _extract_triggers(text: str) -> List[str]:
         """Extrai palavras que indicam triggers"""
+        # 🚨 ÂNCORA: TRIGGERS_EXTRACTION - Extração precisa de triggers
+        # Contexto: Identificar condições de ativação
+        # Cuidado: Usar word boundaries para precisão
+        # Dependências: Melhora identificação de cartas reativas
         trigger_words = ["when", "whenever", "at the", "if", "after", "before"]
         found = []
         text_lower = text.lower()
+        
+        import re
         for trigger in trigger_words:
-            if trigger in text_lower:
-                found.append(trigger)
+            # Para triggers multi-palavra como "at the", não usar \b no meio
+            if ' ' in trigger:
+                if trigger in text_lower:
+                    found.append(trigger)
+            else:
+                # Para palavras simples, usar word boundary
+                pattern = r'\b' + re.escape(trigger) + r'\b'
+                if re.search(pattern, text_lower):
+                    found.append(trigger)
+        
         return found
     
     @staticmethod
     def _extract_effects(text: str) -> List[str]:
         """Extrai tipos de efeitos"""
+        # 🚨 ÂNCORA: EFFECTS_EXTRACTION - Extração precisa de efeitos
+        # Contexto: Deve pegar apenas palavras completas, não substrings
+        # Cuidado: "draw" não deve ser extraído de "Quickdraw"
+        # Dependências: Afeta qualidade dos embeddings e busca semântica
         effect_words = ["draw", "deal", "gain", "create", "destroy", "kill", 
-                       "return", "reduce", "increase", "give", "get", "play"]
+                    "return", "reduce", "increase", "give", "get", "play"]
         found = []
         text_lower = text.lower()
+        
+        # Usar regex para match de palavra completa
+        import re
         for effect in effect_words:
-            if effect in text_lower:
+            # \b marca word boundary - garante palavra completa
+            pattern = r'\b' + re.escape(effect) + r'\b'
+            if re.search(pattern, text_lower):
                 found.append(effect)
+        
         return found
     
     @staticmethod
     def _extract_keywords(text: str) -> List[str]:
         """Extrai keywords importantes"""
-        # Adiciona skills conhecidas se mencionadas
+        # 🚨 ÂNCORA: KEYWORDS_EXTRACTION - Extração de keywords e skills
+        # Contexto: Identifica skills e termos importantes
+        # Cuidado: Skills devem ser case-insensitive mas manter capitalização
+        # Dependências: Crítico para busca por skills específicas
         keywords = []
         text_lower = text.lower()
         
+        import re
+        
+        # Check for known skills
         for skill in ALL_SKILLS.keys():
-            if skill.lower() in text_lower:
-                keywords.append(skill)
-                
+            # Use word boundary para skills
+            pattern = r'\b' + re.escape(skill.lower()) + r'\b'
+            if re.search(pattern, text_lower):
+                keywords.append(skill)  # Manter capitalização original
+        
         # Adiciona outros termos importantes
         important_terms = ["market", "void", "spell", "unit", "weapon", "relic",
-                          "power", "influence", "exhaust", "ready", "attack", "block"]
+                        "power", "influence", "exhaust", "ready", "attack", "block"]
         for term in important_terms:
-            if term in text_lower:
+            pattern = r'\b' + re.escape(term) + r'\b'
+            if re.search(pattern, text_lower):
                 keywords.append(term)
-                
+        
         return keywords
 
 # =============================================================================
