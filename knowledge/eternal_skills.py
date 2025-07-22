@@ -433,6 +433,36 @@ OTHER_SKILLS: Dict[str, SkillData] = {
     },
     
     # S
+
+    "Shift": {
+        "description": "Units with Shift may be played Shifted for their Shift cost. Shifted units can't attack, block, or be selected by any cards. Their passive abilities still function, and they can still be affected by global effects. Units remain Shifted for three turns, then emerge ready and gain Unblockable for the turn",
+        "synergies": [
+            "passive abilities",      # Continuam funcionando
+            "global buffs",          # "+1/+1 to all units" ainda aplica
+            "setup strategies",      # 3 turnos para preparar
+            "surprise attacks",      # Emerge com Unblockable
+            "cost reduction",        # Shift cost geralmente menor
+            "protection timing",     # Dodge removal específico
+            "combat tricks"          # Emerge no momento certo
+        ],
+        "counters": [
+            "harsh rule",           # Mata mesmo Shifted
+            "sack the city",       # Afeta todas unidades
+            "end of days",         # Board wipe global
+            "setback",             # Retorna mesmo Shifted
+            "passage of eons",     # Transform all units
+            "board stalls",        # 3 turnos sem blocker
+            "aggro pressure"       # Tempo perdido
+        ],
+        "archetypes": ["control", "midrange", "tempo", "combo"],
+        "embed_text": "shift shifted emerge phase out untargetable hexproof protection three turns 3 turns alternate cost cheaper deploy early dodge removal setup attacker unblockable timing temporary immunity phasing vanish reappear",
+        "power_level": PowerLevel.STRONG,    # 4
+        "complexity": Complexity.COMPLEX,     # 3
+        "rarity_trend": "rare_plus",
+        "deck_role": ["protection", "tempo", "alternate cost", "setup"],
+        "combo_potential": 4
+    },
+
     "Stealth": {
         "description": "This unit is played hidden. It is revealed when it deals or takes damage, is affected by an enemy effect, or has anything played directly on it",
         "synergies": ["infiltrate", "weapons", "combat tricks", "surprise attacks"],
